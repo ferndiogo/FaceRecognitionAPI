@@ -74,6 +74,7 @@ namespace FaceRecognitionAPI.Controllers {
         [HttpPost]
         public async Task<ActionResult<Employee>> AddEmployee(Employee emp)
         {
+            emp.Id = 0;
             _context.Employees.Add(emp);
             await _context.SaveChangesAsync();
 
@@ -109,8 +110,6 @@ namespace FaceRecognitionAPI.Controllers {
 
             if (empBD == null)
             { return BadRequest("Unregistered employee"); }
-
-            empBD.Id = emp.Id;
             empBD.Name = emp.Name;
             empBD.Contact = emp.Contact;
             empBD.CodPostal = emp.CodPostal;
