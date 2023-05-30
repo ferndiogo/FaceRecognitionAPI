@@ -4,10 +4,10 @@ using System.Xml.Linq;
 namespace FaceRecognitionAPI.Models {
     public class Employee {
 
-        [Required]
         /// <summary>
         /// PK do funcionario
         /// </summary>
+        [Required]
         public int Id { get; set; }
 
         /// <summary>
@@ -22,22 +22,22 @@ namespace FaceRecognitionAPI.Models {
         /// Contacto do funcionario
         /// </summary>
         [Display(Name = "Contacto")]
-        [Required(ErrorMessage = "O {0} é de preenchimento obrigatório")]
-        [RegularExpression("[2,8,7,9]{1}[0-9]{8}", ErrorMessage = "Insira um {0} válido, coloque no formato 9xxxxxxxx.")]
+        [Required(ErrorMessage = "O {0} é de preenchimento obrigatório.")]
+        [RegularExpression("[2,8,7,9]{1}[0-9]{8}", ErrorMessage = "Insira um {0} válido.")]
         public String Contact { get; set; }
 
         /// <summary>
         /// Email do funcionario
         /// </summary>
         [Display(Name = "Email")]
-        [EmailAddress]
+        [EmailAddress(ErrorMessage ="Insira um {0} válido.")]
         public String Email { get; set; }
 
         /// <summary>
         /// Morada do funcionario
         /// </summary>
         [Display(Name = "Morada")]
-        [Required(ErrorMessage = "O {0} é de preenchimento obrigatório.")]
+        [Required(ErrorMessage = "A {0} é de preenchimento obrigatório.")]
         public string Morada { get; set; }
 
         /// <summary>
@@ -66,11 +66,16 @@ namespace FaceRecognitionAPI.Models {
         /// <summary>
         /// Data de nascimento do funcionario
         /// </summary>
-        [Required(ErrorMessage = "O {0} é de preenchimento obrigatório.")]
+        [Required(ErrorMessage = "A {0} é de preenchimento obrigatório.")]
         [Display(Name = "Data de Nascimento")]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         [DataType(DataType.Date)]
         public DateTime DataNasc { get; set; }
+
+        /// <summary>
+        /// Coleção de registos do funcionrio
+        /// </summary>
+        public ICollection<Registry> Registries { get; set; }
     }
 
 }
