@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 
 namespace FaceRecognitionAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
