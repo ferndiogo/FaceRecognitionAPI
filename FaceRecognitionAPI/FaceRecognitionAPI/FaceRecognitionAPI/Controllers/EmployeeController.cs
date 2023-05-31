@@ -20,7 +20,6 @@ namespace FaceRecognitionAPI.Controllers {
         public async Task<ActionResult<IEnumerable<Employee>>> ListEmployees()
         {
             List<Employee> list = await _context.Employees
-                .Include(a => a.Registries)
                 .OrderByDescending(a => a.Id)
                 .Select(x => new Employee
                 {
@@ -33,7 +32,6 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
-                    Registries = x.Registries,
                 })
                 .ToListAsync();
 
@@ -47,7 +45,6 @@ namespace FaceRecognitionAPI.Controllers {
         public async Task<ActionResult<Employee>> GetEmployee(int Id)
         {
             Employee emp = await _context.Employees
-                .Include(a => a.Registries)
                 .OrderByDescending(a => a.Id)
                 .Select(x => new Employee
                 {
@@ -60,7 +57,6 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
-                    Registries = x.Registries,
                 })
                 .Where(a => a.Id == Id)
                 .FirstOrDefaultAsync();
