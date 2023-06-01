@@ -1,7 +1,12 @@
-﻿using FaceRecognitionAPI.Data;
+﻿using Amazon;
+using Amazon.Runtime.SharedInterfaces;
+using Amazon.S3;
+using Amazon.S3.Transfer;
+using FaceRecognitionAPI.Data;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace FaceRecognitionAPI.Controllers {
 
@@ -10,10 +15,14 @@ namespace FaceRecognitionAPI.Controllers {
     public class EmployeeController : ControllerBase {
 
         private readonly ApplicationDbContext _context;
+        private readonly IAmazonS3 _amazonS3Client;
+        private readonly IConfiguration _configuration;
 
-        public EmployeeController(ApplicationDbContext context)
+        public EmployeeController(ApplicationDbContext context, IConfiguration config)
         {
             this._context = context;
+            this._configuration = config;
+            this._amazonS3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(_configuration["AWS:Region"]));
         }
 
         [HttpGet]
@@ -67,12 +76,19 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(emp);
         }
 
+        [Consumes("multipart/form-data")]
         [HttpPost]
-        public async Task<ActionResult<Employee>> AddEmployee(Employee emp)
+        public async Task<ActionResult<Employee>> AddEmployee(IFormFile image, [FromForm] Employee emp)
         {
             emp.Id = 0;
             _context.Employees.Add(emp);
             await _context.SaveChangesAsync();
+
+            if( !await UploadImageAWSS3(image, emp.Name, emp.Id))
+            {
+                await DeleteEmployee(emp.Id);
+                return StatusCode(500, "Error sending image to AWS");
+            }           
 
             return Ok(emp);
         }
@@ -118,5 +134,43 @@ namespace FaceRecognitionAPI.Controllers {
             await _context.SaveChangesAsync();
             return Ok(empBD);
         }
+
+        private async Task<Boolean> UploadImageAWSS3(IFormFile imageFile, string name, int employeeId)
+        {
+            if (imageFile == null || imageFile.Length == 0 || string.IsNullOrEmpty(name)|| employeeId < 0)
+            {
+                return false;
+            }
+
+            var fullName = RemoveAccents(name);
+            var memoryStream = new MemoryStream();
+
+            await imageFile.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            var fileTransferUtility = new TransferUtility(_amazonS3Client);
+            var fileTransferRequest = new TransferUtilityUploadRequest
+            {
+                BucketName = _configuration["AWS:BucketName"],
+                Key = $"index/{fullName.Replace(' ','_')}-{employeeId}",
+                InputStream = memoryStream
+            };
+
+            fileTransferRequest.Metadata.Add("FullName", fullName);
+            fileTransferRequest.Metadata.Add("EmployeeId", employeeId+"");
+
+            await fileTransferUtility.UploadAsync(fileTransferRequest);
+
+            return true;
+        }
+
+        private static string RemoveAccents(String str)
+        {
+            var bytes = Encoding.GetEncoding("Cyrillic").GetBytes(str);
+            return Encoding.ASCII.GetString(bytes);
+        }
     }
+
+
 }
+
