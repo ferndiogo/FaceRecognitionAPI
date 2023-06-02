@@ -117,6 +117,9 @@ namespace FaceRecognitionAPI.Controllers {
                 return StatusCode(500, "An error occurred when deleting a record from DynamoDB");
             }
 
+            await RemoveAWSS3Item(RemoveAccents(emp.Name).Replace(' ', '_') + "-" + Id.ToString());
+
+
             var regs = await _context.Registries.Where(a => a.EmployeeId == Id).ToListAsync();
 
             if (regs.Any())
@@ -200,6 +203,17 @@ namespace FaceRecognitionAPI.Controllers {
                 return true;
             }
             return false;
+        }
+
+        private async Task RemoveAWSS3Item(string imageName)
+        {
+            var deleteRequest = new DeleteObjectRequest
+            {
+                BucketName = _configuration["AWS:BucketName"],
+                Key = $"index/{imageName}"
+            };
+
+            await _amazonS3Client.DeleteObjectAsync(deleteRequest);
         }
 
         private static string RemoveAccents(String str)
