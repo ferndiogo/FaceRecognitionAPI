@@ -1,15 +1,14 @@
 ﻿using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
-using Amazon.Runtime.SharedInterfaces;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using FaceRecognitionAPI.Data;
+using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json.Linq;
 using System.Text;
 
 namespace FaceRecognitionAPI.Controllers {
@@ -38,11 +37,11 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Employee>>> ListEmployees()
+        public async Task<ActionResult<List<EmployeeDTO>>> ListEmployees()
         {
-            List<Employee> list = await _context.Employees
+            List<EmployeeDTO> list = await _context.Employees
                 .OrderByDescending(a => a.Id)
-                .Select(x => new Employee
+                .Select(x => new EmployeeDTO
                 {
                     Id = x.Id,
                     Name = x.Name,
@@ -53,6 +52,7 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
+                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Name).Replace(" ", "_")}-{x.Id}"
                 })
                 .ToListAsync();
 
@@ -63,46 +63,63 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpGet("{Id}")]
-        public async Task<ActionResult<Employee>> GetEmployee(int Id)
+        public async Task<ActionResult<EmployeeDTO>> GetEmployee(int Id)
         {
-            Employee emp = await _context.Employees
-                .OrderByDescending(a => a.Id)
-                .Select(x => new Employee
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Contact = x.Contact,
-                    CodPostal = x.CodPostal,
-                    DataNasc = x.DataNasc,
-                    Email = x.Email,
-                    Morada = x.Morada,
-                    Pais = x.Pais,
-                    Sexo = x.Sexo,
-                })
-                .Where(a => a.Id == Id)
-                .FirstOrDefaultAsync();
+            Employee emp = await _context.Employees.FindAsync(Id);
 
             if (emp == null)
             { return NotFound("Unregistered employee"); }
 
-            return Ok(emp);
+            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+
+            EmployeeDTO dto = new EmployeeDTO
+            {
+                Id = emp.Id,
+                Name = emp.Name,
+                Contact = emp.Contact,
+                CodPostal = emp.CodPostal,
+                DataNasc = emp.DataNasc,
+                Email = emp.Email,
+                Morada = emp.Morada,
+                Pais = emp.Pais,
+                Sexo = emp.Sexo,
+                Image = _configuration["AWS:URLBucket"]+imgName,
+            };
+
+            return Ok(dto);
         }
 
         [Consumes("multipart/form-data")]
         [HttpPost]
-        public async Task<ActionResult<Employee>> AddEmployee(IFormFile image, [FromForm] Employee emp)
+        public async Task<ActionResult<EmployeeDTO>> AddEmployee(IFormFile image, [FromForm] Employee emp)
         {
             emp.Id = 0;
             _context.Employees.Add(emp);
             await _context.SaveChangesAsync();
 
-            if( !await UploadImageAWSS3(image, emp.Name, emp.Id))
+            if (!await UploadImageAWSS3(image, emp.Name, emp.Id))
             {
                 await DeleteEmployee(emp.Id);
+                await _context.SaveChangesAsync();
                 return StatusCode(500, "Error sending image to AWS");
-            }           
+            }
 
-            return Ok(emp);
+            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+            EmployeeDTO dto = new EmployeeDTO
+            {
+                Id = emp.Id,
+                Name = emp.Name,
+                Contact = emp.Contact,
+                CodPostal = emp.CodPostal,
+                DataNasc = emp.DataNasc,
+                Email = emp.Email,
+                Morada = emp.Morada,
+                Pais = emp.Pais,
+                Sexo = emp.Sexo,
+                Image = _configuration["AWS:URLBucket"] + imgName,
+            };
+
+            return Ok(dto);
         }
 
         [HttpDelete("{Id}")]
@@ -112,7 +129,7 @@ namespace FaceRecognitionAPI.Controllers {
             if (emp == null)
             { return BadRequest("Unregistered employee"); }
 
-            if(!await RemoveDynamoDBItem("EmployeeId", Id.ToString()))
+            if (!await RemoveDynamoDBItem("EmployeeId", Id.ToString()))
             {
                 return StatusCode(500, "An error occurred when deleting a record from DynamoDB");
             }
@@ -133,7 +150,7 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpPut("{Id}")]
-        public async Task<ActionResult<Employee>> EditEmployee(int Id, Employee emp)
+        public async Task<ActionResult<EmployeeDTO>> EditEmployee(IFormFile image ,int Id, [FromForm] Employee emp)
         {
             if (Id != emp.Id)
             { return BadRequest("Id not match"); }
@@ -152,12 +169,38 @@ namespace FaceRecognitionAPI.Controllers {
             empBD.Sexo = emp.Sexo;
 
             await _context.SaveChangesAsync();
-            return Ok(empBD);
+
+            if(image != null)
+            {
+                if(await RemoveDynamoDBItem("EmployeeId", Id.ToString()))
+                {
+                    await RemoveAWSS3Item(RemoveAccents(emp.Name).Replace(' ', '_') + "-" + Id.ToString());
+                    await UploadImageAWSS3(image, empBD.Name, empBD.Id);
+                }
+            }
+
+            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+
+            EmployeeDTO dto = new EmployeeDTO
+            {
+                Id = empBD.Id,
+                Name = empBD.Name,
+                Contact = empBD.Contact,
+                CodPostal = empBD.CodPostal,
+                DataNasc = empBD.DataNasc,
+                Email = empBD.Email,
+                Morada = empBD.Morada,
+                Pais = empBD.Pais,
+                Sexo = empBD.Sexo,
+                Image = _configuration["AWS:URLBucket"] + imgName,
+            };
+
+            return Ok(dto);
         }
 
         private async Task<Boolean> UploadImageAWSS3(IFormFile imageFile, string name, int employeeId)
         {
-            if (imageFile == null || imageFile.Length == 0 || string.IsNullOrEmpty(name)|| employeeId < 0)
+            if (imageFile == null || imageFile.Length == 0 || string.IsNullOrEmpty(name) || employeeId < 0)
             {
                 return false;
             }
@@ -172,12 +215,12 @@ namespace FaceRecognitionAPI.Controllers {
             var fileTransferRequest = new TransferUtilityUploadRequest
             {
                 BucketName = _configuration["AWS:BucketName"],
-                Key = $"index/{fullName.Replace(' ','_')}-{employeeId}",
+                Key = $"index/{fullName.Replace(' ', '_')}-{employeeId}",
                 InputStream = memoryStream
             };
 
             fileTransferRequest.Metadata.Add("FullName", fullName);
-            fileTransferRequest.Metadata.Add("EmployeeId", employeeId+"");
+            fileTransferRequest.Metadata.Add("EmployeeId", employeeId + "");
 
             await fileTransferUtility.UploadAsync(fileTransferRequest);
 
