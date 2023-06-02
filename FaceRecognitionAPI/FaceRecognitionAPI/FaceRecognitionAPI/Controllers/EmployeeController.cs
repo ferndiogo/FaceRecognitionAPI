@@ -1,11 +1,15 @@
 ﻿using Amazon;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.Runtime.SharedInterfaces;
 using Amazon.S3;
+using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using FaceRecognitionAPI.Data;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System.Text;
 
 namespace FaceRecognitionAPI.Controllers {
@@ -17,19 +21,26 @@ namespace FaceRecognitionAPI.Controllers {
         private readonly ApplicationDbContext _context;
         private readonly IAmazonS3 _amazonS3Client;
         private readonly IConfiguration _configuration;
+        private readonly AmazonDynamoDBClient _dynamoDbClient;
 
         public EmployeeController(ApplicationDbContext context, IConfiguration config)
         {
             this._context = context;
             this._configuration = config;
             this._amazonS3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(_configuration["AWS:Region"]));
+
+            var configDB = new AmazonDynamoDBConfig
+            {
+                RegionEndpoint = RegionEndpoint.GetBySystemName(_configuration["AWS:Region"])
+            };
+
+            _dynamoDbClient = new AmazonDynamoDBClient(configDB);
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Employee>>> ListEmployees()
         {
             List<Employee> list = await _context.Employees
-                .Include(a => a.Registries)
                 .OrderByDescending(a => a.Id)
                 .Select(x => new Employee
                 {
@@ -42,7 +53,6 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
-                    Registries = x.Registries,
                 })
                 .ToListAsync();
 
@@ -56,7 +66,6 @@ namespace FaceRecognitionAPI.Controllers {
         public async Task<ActionResult<Employee>> GetEmployee(int Id)
         {
             Employee emp = await _context.Employees
-                .Include(a => a.Registries)
                 .OrderByDescending(a => a.Id)
                 .Select(x => new Employee
                 {
@@ -69,7 +78,6 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
-                    Registries = x.Registries,
                 })
                 .Where(a => a.Id == Id)
                 .FirstOrDefaultAsync();
@@ -100,9 +108,14 @@ namespace FaceRecognitionAPI.Controllers {
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteEmployee(int Id)
         {
-            var emps = await _context.Employees.FindAsync(Id);
-            if (emps == null)
+            var emp = await _context.Employees.FindAsync(Id);
+            if (emp == null)
             { return BadRequest("Unregistered employee"); }
+
+            if(!await RemoveDynamoDBItem("EmployeeId", Id.ToString()))
+            {
+                return StatusCode(500, "An error occurred when deleting a record from DynamoDB");
+            }
 
             var regs = await _context.Registries.Where(a => a.EmployeeId == Id).ToListAsync();
 
@@ -111,7 +124,7 @@ namespace FaceRecognitionAPI.Controllers {
                 _context.Registries.RemoveRange(regs);
             }
 
-            _context.Employees.Remove(emps);
+            _context.Employees.Remove(emp);
             await _context.SaveChangesAsync();
             return Ok("Employee successfully removed");
         }
@@ -168,11 +181,33 @@ namespace FaceRecognitionAPI.Controllers {
             return true;
         }
 
+        private async Task<Boolean> RemoveDynamoDBItem(string attribute, string value)
+        {
+            var table = Table.LoadTable(_dynamoDbClient, _configuration["AWS:DynamoDBTable"]);
+
+            var filter = new ScanFilter();
+            filter.AddCondition(attribute, ScanOperator.Equal, value);
+
+            var search = table.Scan(filter);
+
+            var record = await search.GetNextSetAsync();
+
+            if (record.Count > 0)
+            {
+                var deleteItemOperation = table.DeleteItemAsync(record[0]);
+                deleteItemOperation.Wait();
+
+                return true;
+            }
+            return false;
+        }
+
         private static string RemoveAccents(String str)
         {
             var bytes = Encoding.GetEncoding("Cyrillic").GetBytes(str);
             return Encoding.ASCII.GetString(bytes);
         }
+
     }
 
 
