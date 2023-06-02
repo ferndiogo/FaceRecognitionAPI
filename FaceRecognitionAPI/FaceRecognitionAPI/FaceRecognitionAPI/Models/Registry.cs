@@ -18,6 +18,7 @@ namespace FaceRecognitionAPI.Models {
         /// Regista se o registo foi de entrada ou saida
         /// </summary>
         [Required]
+        [RegularExpression("[EeSs]", ErrorMessage = "You can only use E for Input, or S for Output, in the Type field")]
         public string Type { get; set; } //Entrada ou Saida
 
         /// <summary>
