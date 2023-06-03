@@ -243,9 +243,9 @@ namespace FaceRecognitionAPI.Controllers {
 
                                 if (attributeName == "EmployeeId")
                                 {
-                                    if (attributeValue.N != null)
+                                    if (attributeValue.S != null)
                                     {
-                                        int attributeStringValue = int.Parse(attributeValue.N);
+                                        int attributeStringValue = int.Parse(attributeValue.S);
                                         emps.Add(attributeStringValue);
                                     }
                                 }
