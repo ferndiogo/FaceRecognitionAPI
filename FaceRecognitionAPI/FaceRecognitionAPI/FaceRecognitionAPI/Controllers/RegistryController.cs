@@ -5,10 +5,12 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Rekognition;
 using Amazon.Rekognition.Model;
 using FaceRecognitionAPI.Data;
+using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Text;
 
 namespace FaceRecognitionAPI.Controllers {
     [Route("[controller]")]
@@ -36,18 +38,30 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Registry>>> ListRegistries()
+        public async Task<ActionResult<List<RegistryDTO>>> ListRegistries()
         {
-            List<Registry> registries = await _context.Registries
+            List<RegistryDTO> registries = await _context.Registries
                 .Include(a => a.Employee)
                 .OrderByDescending(a => a.Id)
-                .Select(x => new Registry
+                .Select(x => new RegistryDTO
                 {
                     Id = x.Id,
                     DateTime = x.DateTime,
                     Type = x.Type,
                     EmployeeId = x.EmployeeId,
-                    Employee = x.Employee,
+                    Employee = new EmployeeDTO
+                    {
+                        Id = x.Employee.Id,
+                        Name = x.Employee.Name,
+                        Contact = x.Employee.Contact,
+                        CodPostal = x.Employee.CodPostal,
+                        DataNasc = x.Employee.DataNasc,
+                        Email = x.Employee.Email,
+                        Morada = x.Employee.Morada,
+                        Pais = x.Employee.Pais,
+                        Sexo = x.Employee.Sexo,
+                        Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Employee.Name).Replace(" ", "_")}-{x.Employee.Id}",
+                    },
                 })
                 .ToListAsync();
 
@@ -57,24 +71,35 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpGet("employee/{employeeId}")]
-        public async Task<ActionResult<List<Registry>>> ListRegistriesEmployee(int employeeId)
+        public async Task<ActionResult<List<RegistryDTO>>> ListRegistriesEmployee(int employeeId)
         {
 
             if (await _context.Employees.FindAsync(employeeId) == null)
             { return BadRequest("Unregistered employee"); }
 
-            List<Registry> list = await _context.Registries
+            List<RegistryDTO> list = await _context.Registries
                 .Include(a => a.Employee)
                 .OrderByDescending(a => a.Id)
-                .Select(x => new Registry
+                .Select(x => new RegistryDTO
                 {
                     Id = x.Id,
                     DateTime = x.DateTime,
                     Type = x.Type,
                     EmployeeId = x.EmployeeId,
-                    Employee = x.Employee,
-                })
-                .Where(a => a.EmployeeId == employeeId)
+                    Employee = new EmployeeDTO
+                    {
+                        Id = x.Employee.Id,
+                        Name = x.Employee.Name,
+                        Contact = x.Employee.Contact,
+                        CodPostal = x.Employee.CodPostal,
+                        DataNasc = x.Employee.DataNasc,
+                        Email = x.Employee.Email,
+                        Morada = x.Employee.Morada,
+                        Pais = x.Employee.Pais,
+                        Sexo = x.Employee.Sexo,
+                        Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Employee.Name).Replace(" ", "_")}-{x.Employee.Id}",
+                    },
+                }).Where(a => a.EmployeeId == employeeId)
                 .ToListAsync();
 
             if (list.Any())
@@ -83,14 +108,35 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Registry>> GetRegistry(int id)
+        public async Task<ActionResult<RegistryDTO>> GetRegistry(int id)
         {
             Registry rgs = await _context.Registries.FindAsync(id);
+
+            RegistryDTO aux = new RegistryDTO
+            {
+                Id = rgs.Id,
+                DateTime = rgs.DateTime,
+                Type = rgs.Type,
+                EmployeeId = rgs.EmployeeId,
+                Employee = new EmployeeDTO
+                {
+                    Id = rgs.Employee.Id,
+                    Name = rgs.Employee.Name,
+                    Contact = rgs.Employee.Contact,
+                    CodPostal = rgs.Employee.CodPostal,
+                    DataNasc = rgs.Employee.DataNasc,
+                    Email = rgs.Employee.Email,
+                    Morada = rgs.Employee.Morada,
+                    Pais = rgs.Employee.Pais,
+                    Sexo = rgs.Employee.Sexo,
+                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(rgs.Employee.Name).Replace(" ", "_")}-{rgs.Employee.Id}",
+                },
+            };
 
             if (rgs == null)
             { return BadRequest("This registry does not exist"); }
 
-            return Ok(rgs);
+            return Ok(aux);
         }
 
 
@@ -175,7 +221,7 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<Registry>> EditRegistry(int id, Registry registry)
+        public async Task<ActionResult<RegistryDTO>> EditRegistry(int id, Registry registry)
         {
             if (id != registry.Id)
             { return BadRequest("Id not match"); }
@@ -195,8 +241,29 @@ namespace FaceRecognitionAPI.Controllers {
             rg.EmployeeId = registry.EmployeeId;
             rg.Employee = emp;
 
+            RegistryDTO dto = new RegistryDTO
+            {
+                Id = rg.Id,
+                DateTime = rg.DateTime,
+                Type = rg.Type,
+                EmployeeId = rg.EmployeeId,
+                Employee = new EmployeeDTO
+                {
+                    Id = rg.Employee.Id,
+                    Name = rg.Employee.Name,
+                    Contact = rg.Employee.Contact,
+                    CodPostal = rg.Employee.CodPostal,
+                    DataNasc = rg.Employee.DataNasc,
+                    Email = rg.Employee.Email,
+                    Morada = rg.Employee.Morada,
+                    Pais = rg.Employee.Pais,
+                    Sexo = rg.Employee.Sexo,
+                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(rg.Employee.Name).Replace(" ", "_")}-{rg.Employee.Id}",
+                },
+            };
+
             await _context.SaveChangesAsync();
-            return Ok(rg);
+            return Ok(dto);
         }
 
         private async Task<List<int>> RecognizeFace(IFormFile imageFile)
@@ -286,6 +353,12 @@ namespace FaceRecognitionAPI.Controllers {
 
             return response.Items;
 
+        }
+
+        private static string RemoveAccents(String str)
+        {
+            var bytes = Encoding.GetEncoding("Cyrillic").GetBytes(str);
+            return Encoding.ASCII.GetString(bytes);
         }
     }
 }
