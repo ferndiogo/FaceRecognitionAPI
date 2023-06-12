@@ -52,7 +52,7 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = x.Morada,
                     Pais = x.Pais,
                     Sexo = x.Sexo,
-                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Name).Replace(" ", "_")}-{x.Id}"
+                    Image = _configuration["AWS:URLBucket"] + $"{x.Id}"
                 })
                 .ToListAsync();
 
@@ -70,7 +70,7 @@ namespace FaceRecognitionAPI.Controllers {
             if (emp == null)
             { return NotFound("Unregistered employee"); }
 
-            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+            string imgName = $"{emp.Id}";
 
             EmployeeDTO dto = new EmployeeDTO
             {
@@ -104,7 +104,7 @@ namespace FaceRecognitionAPI.Controllers {
                 return StatusCode(500, "Error sending image to AWS");
             }
 
-            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+            string imgName = $"{emp.Id}";
             EmployeeDTO dto = new EmployeeDTO
             {
                 Id = emp.Id,
@@ -134,7 +134,7 @@ namespace FaceRecognitionAPI.Controllers {
                 return StatusCode(500, "An error occurred when deleting a record from DynamoDB");
             }
 
-            await RemoveAWSS3Item(RemoveAccents(emp.Name).Replace(' ', '_') + "-" + Id.ToString());
+            await RemoveAWSS3Item(Id.ToString());
 
 
             var regs = await _context.Registries.Where(a => a.EmployeeId == Id).ToListAsync();
@@ -172,12 +172,12 @@ namespace FaceRecognitionAPI.Controllers {
             {
                 if(await RemoveDynamoDBItem("EmployeeId", Id.ToString()))
                 {
-                    await RemoveAWSS3Item(RemoveAccents(emp.Name).Replace(' ', '_') + "-" + Id.ToString());
+                    await RemoveAWSS3Item(Id.ToString());
                     await UploadImageAWSS3(image, empBD.Name, empBD.Id);
                 }
             }
 
-            string imgName = $"{RemoveAccents(emp.Name).Replace(" ", "_")}-{emp.Id}";
+            string imgName = $"{emp.Id}";
 
             EmployeeDTO dto = new EmployeeDTO
             {
@@ -213,7 +213,7 @@ namespace FaceRecognitionAPI.Controllers {
             var fileTransferRequest = new TransferUtilityUploadRequest
             {
                 BucketName = _configuration["AWS:BucketName"],
-                Key = $"index/{fullName.Replace(' ', '_')}-{employeeId}",
+                Key = $"index/{employeeId}",
                 InputStream = memoryStream
             };
 
