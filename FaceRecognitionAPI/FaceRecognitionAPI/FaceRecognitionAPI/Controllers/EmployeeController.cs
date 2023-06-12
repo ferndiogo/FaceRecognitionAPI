@@ -152,8 +152,6 @@ namespace FaceRecognitionAPI.Controllers {
         [HttpPut("{Id}")]
         public async Task<ActionResult<EmployeeDTO>> EditEmployee(IFormFile image ,int Id, [FromForm] Employee emp)
         {
-            if (Id != emp.Id)
-            { return BadRequest("Id not match"); }
 
             var empBD = await _context.Employees.FindAsync(Id);
 
