@@ -79,6 +79,7 @@ namespace FaceRecognitionAPI.Controllers
         }
 
         [HttpGet("Username")]
+        [Authorize]
         public async Task<ActionResult<string>> GetUsername()
         {
             var identity = User.Identity.Name;
@@ -96,6 +97,7 @@ namespace FaceRecognitionAPI.Controllers
         }
 
         [HttpGet("Roles")]
+        [Authorize]
         public async Task<ActionResult<string>> GetRoles()
         {
             var identity = User.Identity.Name;
@@ -113,6 +115,7 @@ namespace FaceRecognitionAPI.Controllers
         }
 
         [HttpGet("Id")]
+        [Authorize]
         public async Task<ActionResult<string>> GetId()
         {
             var identity = User.Identity.Name;
