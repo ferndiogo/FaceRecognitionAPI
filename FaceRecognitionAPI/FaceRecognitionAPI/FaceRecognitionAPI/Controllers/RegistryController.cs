@@ -1,4 +1,3 @@
-
 ﻿using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -42,7 +41,7 @@ namespace FaceRecognitionAPI.Controllers {
         {
             List<RegistryDTO> registries = await _context.Registries
                 .Include(a => a.Employee)
-                .OrderByDescending(a => a.Id)
+                .OrderByDescending(a => a.DateTime)
                 .Select(x => new RegistryDTO
                 {
                     Id = x.Id,
@@ -79,7 +78,7 @@ namespace FaceRecognitionAPI.Controllers {
 
             List<RegistryDTO> list = await _context.Registries
                 .Include(a => a.Employee)
-                .OrderByDescending(a => a.Id)
+                .OrderByDescending(a => a.DateTime)
                 .Select(x => new RegistryDTO
                 {
                     Id = x.Id,
@@ -139,9 +138,9 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(aux);
         }
 
-
+        [Consumes("multipart/form-data")]
         [HttpPost("manual")]
-        public async Task<ActionResult<Registry>> AddRegistry(Registry registry)
+        public async Task<ActionResult<Registry>> AddRegistry([FromForm]Registry registry)
         {
             Employee emp = await _context.Employees.FindAsync(registry.EmployeeId);
 
