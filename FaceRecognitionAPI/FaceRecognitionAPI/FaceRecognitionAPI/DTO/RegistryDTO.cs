@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace FaceRecognitionAPI.Models {
-    public class Registry {
+namespace FaceRecognitionAPI.DTO{
+    public class RegistryDTO {
         /// <summary>
         /// PK do Registo
         /// </summary>
@@ -30,6 +30,6 @@ namespace FaceRecognitionAPI.Models {
         /// <summary>
         /// Referencia para o Funcionário
         /// </summary>
-        public Employee Employee { get; set; }
+        public EmployeeDTO Employee { get; set; }
     }
 }

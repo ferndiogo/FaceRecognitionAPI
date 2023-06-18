@@ -71,11 +71,6 @@ namespace FaceRecognitionAPI.Models {
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         [DataType(DataType.Date)]
         public DateTime DataNasc { get; set; }
-
-        /// <summary>
-        /// Coleção de registos do funcionrio
-        /// </summary>
-        public ICollection<Registry> Registries { get; set; }
     }
 
 }
