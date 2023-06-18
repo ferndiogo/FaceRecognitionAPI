@@ -6,6 +6,7 @@ using Amazon.Rekognition.Model;
 using FaceRecognitionAPI.Data;
 using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ using System.Text;
 namespace FaceRecognitionAPI.Controllers {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class RegistryController : ControllerBase {
 
         private readonly ApplicationDbContext _context;
@@ -59,7 +61,7 @@ namespace FaceRecognitionAPI.Controllers {
                         Morada = x.Employee.Morada,
                         Pais = x.Employee.Pais,
                         Sexo = x.Employee.Sexo,
-                        Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Employee.Name).Replace(" ", "_")}-{x.Employee.Id}",
+                        Image = _configuration["AWS:URLBucket"] + $"{x.Employee.Id}",
                     },
                 })
                 .ToListAsync();
@@ -96,7 +98,7 @@ namespace FaceRecognitionAPI.Controllers {
                         Morada = x.Employee.Morada,
                         Pais = x.Employee.Pais,
                         Sexo = x.Employee.Sexo,
-                        Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(x.Employee.Name).Replace(" ", "_")}-{x.Employee.Id}",
+                        Image = _configuration["AWS:URLBucket"] + $"{x.Employee.Id}",
                     },
                 }).Where(a => a.EmployeeId == employeeId)
                 .ToListAsync();
@@ -128,7 +130,7 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = rgs.Employee.Morada,
                     Pais = rgs.Employee.Pais,
                     Sexo = rgs.Employee.Sexo,
-                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(rgs.Employee.Name).Replace(" ", "_")}-{rgs.Employee.Id}",
+                    Image = _configuration["AWS:URLBucket"] + $"{rgs.Employee.Id}",
                 },
             };
 
@@ -257,7 +259,7 @@ namespace FaceRecognitionAPI.Controllers {
                     Morada = rg.Employee.Morada,
                     Pais = rg.Employee.Pais,
                     Sexo = rg.Employee.Sexo,
-                    Image = _configuration["AWS:URLBucket"] + $"{RemoveAccents(rg.Employee.Name).Replace(" ", "_")}-{rg.Employee.Id}",
+                    Image = _configuration["AWS:URLBucket"] + $"{rg.Employee.Id}",
                 },
             };
 
@@ -352,12 +354,6 @@ namespace FaceRecognitionAPI.Controllers {
 
             return response.Items;
 
-        }
-
-        private static string RemoveAccents(String str)
-        {
-            var bytes = Encoding.GetEncoding("Cyrillic").GetBytes(str);
-            return Encoding.ASCII.GetString(bytes);
         }
     }
 }

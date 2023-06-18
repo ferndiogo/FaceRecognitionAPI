@@ -7,6 +7,7 @@ using Amazon.S3.Transfer;
 using FaceRecognitionAPI.Data;
 using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
@@ -15,6 +16,7 @@ namespace FaceRecognitionAPI.Controllers {
 
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class EmployeeController : ControllerBase {
 
         private readonly ApplicationDbContext _context;
@@ -68,9 +70,7 @@ namespace FaceRecognitionAPI.Controllers {
             Employee emp = await _context.Employees.FindAsync(Id);
 
             if (emp == null)
-            { return NotFound("Unregistered employee"); }
-
-            string imgName = $"{emp.Id}";
+            { return BadRequest("Unregistered employee"); }
 
             EmployeeDTO dto = new EmployeeDTO
             {
@@ -83,7 +83,7 @@ namespace FaceRecognitionAPI.Controllers {
                 Morada = emp.Morada,
                 Pais = emp.Pais,
                 Sexo = emp.Sexo,
-                Image = _configuration["AWS:URLBucket"]+imgName,
+                Image = _configuration["AWS:URLBucket"] + $"{emp.Id}",
             };
 
             return Ok(dto);
