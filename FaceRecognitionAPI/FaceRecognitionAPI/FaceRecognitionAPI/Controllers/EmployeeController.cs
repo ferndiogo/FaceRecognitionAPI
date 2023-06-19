@@ -1,6 +1,7 @@
 ﻿using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
@@ -27,15 +28,17 @@ namespace FaceRecognitionAPI.Controllers {
         public EmployeeController(ApplicationDbContext context, IConfiguration config)
         {
             this._context = context;
+
             this._configuration = config;
-            this._amazonS3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(_configuration["AWS:Region"]));
 
-            var configDB = new AmazonDynamoDBConfig
-            {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(_configuration["AWS:Region"])
-            };
+            // Manually set AWS credentials
+            var awsAccessKeyId = _configuration["AWS:AccessKeyId"];
+            var awsSecretAccessKey = _configuration["AWS:SecretAccessKey"];
+            var awsRegion = _configuration["AWS:Region"];
 
-            _dynamoDbClient = new AmazonDynamoDBClient(configDB);
+            var credentials = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
+            this._amazonS3Client = new AmazonS3Client(credentials, RegionEndpoint.GetBySystemName(awsRegion));
+            this._dynamoDbClient = new AmazonDynamoDBClient(credentials, RegionEndpoint.GetBySystemName(awsRegion));
         }
 
         [HttpGet]

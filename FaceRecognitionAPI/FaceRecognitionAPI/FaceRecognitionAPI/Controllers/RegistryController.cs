@@ -3,19 +3,18 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Rekognition;
 using Amazon.Rekognition.Model;
+using Amazon.Runtime;
 using FaceRecognitionAPI.Data;
 using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace FaceRecognitionAPI.Controllers {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
     public class RegistryController : ControllerBase {
 
         private readonly ApplicationDbContext _context;
@@ -27,14 +26,15 @@ namespace FaceRecognitionAPI.Controllers {
         {
             _context = context;
             _configuration = configuration;
-            _rekognitionClient = new AmazonRekognitionClient(RegionEndpoint.GetBySystemName(_configuration["AWS:Region"]));
 
-            var configDB = new AmazonDynamoDBConfig
-            {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(_configuration["AWS:Region"])
-            };
+            // Manually set AWS credentials
+            var awsAccessKeyId = _configuration["AWS:AccessKeyId"];
+            var awsSecretAccessKey = _configuration["AWS:SecretAccessKey"];
+            var awsRegion = _configuration["AWS:Region"];
+            var credentials = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
 
-            _dynamoDbClient = new AmazonDynamoDBClient(configDB);
+            _rekognitionClient = new AmazonRekognitionClient(credentials, RegionEndpoint.GetBySystemName(_configuration["AWS:Region"]));
+            this._dynamoDbClient = new AmazonDynamoDBClient(credentials, RegionEndpoint.GetBySystemName(awsRegion));
 
         }
 
