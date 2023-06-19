@@ -1,4 +1,5 @@
 ﻿using FaceRecognitionAPI.Data;
+using FaceRecognitionAPI.DTO;
 using FaceRecognitionAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -30,7 +31,7 @@ namespace FaceRecognitionAPI.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register([FromForm] String username, [FromForm] String password)
         {
-            if (!db.Users.Where(x => x.Username == username).Any())
+            if (!(db.Users.Where(x => x.Username == username).Any()))
             {
                 User user = new User();
 
@@ -77,6 +78,65 @@ namespace FaceRecognitionAPI.Controllers
 
             return Ok(token);
         }
+
+        [HttpGet]
+        public async Task<ActionResult<List<UserDTO>>> ListUsers()
+        {
+            List<UserDTO> list = await db.Users
+                .OrderByDescending(a => a.Id)
+                .Select(x => new UserDTO
+                {
+                    Id = x.Id,
+                    Username = x.Username,
+                    TokenCreated = x.TokenCreated,
+                    Role = x.Role
+                })
+                .ToListAsync();
+
+            if (!list.Any())
+            { return BadRequest("There are no registered Users"); }
+
+            return Ok(list);
+        }
+
+        [HttpPut("edit/{Id}")]
+        public async Task<ActionResult<UserDTO>> EditEmployee(int Id, [FromForm] UserDTO user)
+        {
+
+            var userDB = await db.Users.FindAsync(Id);
+
+            if (userDB == null)
+            { return BadRequest("Unregistered User"); }
+
+            userDB.Username = user.Username;
+            userDB.Role = user.Role;
+
+            UserDTO dto = new UserDTO
+            {
+                Id = userDB.Id,
+                Username = userDB.Username,
+                TokenCreated = userDB.TokenCreated,
+                Role = userDB.Role
+            };
+
+            await db.SaveChangesAsync();
+
+            return Ok(dto);
+        }
+
+        [HttpDelete("delete/{Id}")]
+        public async Task<IActionResult> DeleteEmployee(int Id)
+        {
+            var user = await db.Users.FindAsync(Id);
+            if (user == null)
+            { return BadRequest("Unregistered employee"); }
+
+            db.Users.Remove(user);
+            await db.SaveChangesAsync();
+            return Ok("User successfully removed");
+        }
+
+
 
         [HttpGet("Username")]
         [Authorize]

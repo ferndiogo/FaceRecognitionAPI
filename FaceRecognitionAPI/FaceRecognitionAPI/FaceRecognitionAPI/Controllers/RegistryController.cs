@@ -222,7 +222,7 @@ namespace FaceRecognitionAPI.Controllers {
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<RegistryDTO>> EditRegistry(int id, Registry registry)
+        public async Task<ActionResult<RegistryDTO>> EditRegistry(int id, [FromForm]Registry registry)
         {
             if (id != registry.Id)
             { return BadRequest("Id not match"); }
