@@ -38,6 +38,7 @@ namespace FaceRecognitionAPI.Controllers {
 
         }
 
+        [Authorize(Roles = "Admin, User")]
         [HttpGet]
         public async Task<ActionResult<List<RegistryDTO>>> ListRegistries()
         {
@@ -71,6 +72,7 @@ namespace FaceRecognitionAPI.Controllers {
             return BadRequest("There are no Registries");
         }
 
+        [Authorize(Roles = "Admin, User")]
         [HttpGet("employee/{employeeId}")]
         public async Task<ActionResult<List<RegistryDTO>>> ListRegistriesEmployee(int employeeId)
         {
@@ -108,6 +110,7 @@ namespace FaceRecognitionAPI.Controllers {
             return BadRequest("There are no Registries for this employee");
         }
 
+        [Authorize(Roles = "Admin, User")]
         [HttpGet("{id}")]
         public async Task<ActionResult<RegistryDTO>> GetRegistry(int id)
         {
@@ -140,6 +143,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(aux);
         }
 
+        [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost("manual")]
         public async Task<ActionResult<Registry>> AddRegistry([FromForm]Registry registry)
@@ -207,6 +211,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(list);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRegistry(int id)
         {
@@ -221,6 +226,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok("Registry sucessfully removed");
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<ActionResult<RegistryDTO>> EditRegistry(int id, [FromForm]Registry registry)
         {

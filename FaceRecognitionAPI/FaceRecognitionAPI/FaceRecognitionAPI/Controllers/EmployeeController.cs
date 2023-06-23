@@ -16,7 +16,6 @@ namespace FaceRecognitionAPI.Controllers {
 
     [ApiController]
     [Route("[controller]")]
-    [Authorize]
     public class EmployeeController : ControllerBase {
 
         private readonly ApplicationDbContext _context;
@@ -38,6 +37,7 @@ namespace FaceRecognitionAPI.Controllers {
             _dynamoDbClient = new AmazonDynamoDBClient(configDB);
         }
 
+        [Authorize(Roles = "Admin, User")]
         [HttpGet]
         public async Task<ActionResult<List<EmployeeDTO>>> ListEmployees()
         {
@@ -64,6 +64,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(list);
         }
 
+        [Authorize(Roles = "Admin, User")]
         [HttpGet("{Id}")]
         public async Task<ActionResult<EmployeeDTO>> GetEmployee(int Id)
         {
@@ -89,6 +90,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost]
         public async Task<ActionResult<EmployeeDTO>> AddEmployee(IFormFile image, [FromForm] Employee emp)
@@ -122,6 +124,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteEmployee(int Id)
         {
@@ -149,6 +152,7 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok("Employee successfully removed");
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{Id}")]
         public async Task<ActionResult<EmployeeDTO>> EditEmployee(IFormFile image ,int Id, [FromForm] Employee emp)
         {

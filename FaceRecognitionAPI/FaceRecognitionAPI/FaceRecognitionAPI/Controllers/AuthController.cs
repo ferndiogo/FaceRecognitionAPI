@@ -27,6 +27,7 @@ namespace FaceRecognitionAPI.Controllers
             this.db = db;
         }
 
+        [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register([FromForm] String username, [FromForm] String password)
@@ -70,15 +71,16 @@ namespace FaceRecognitionAPI.Controllers
                 return BadRequest("Password incorreta.");
             }
 
-            string token = CreateToken(user);
-
             user.TokenCreated = DateTime.Now;
             user.TokenExpires = DateTime.Now.AddDays(7);
             db.SaveChanges();
 
+            string token = CreateToken(user);
+
             return Ok(token);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<List<UserDTO>>> ListUsers()
         {
@@ -99,8 +101,9 @@ namespace FaceRecognitionAPI.Controllers
             return Ok(list);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("edit/{Id}")]
-        public async Task<ActionResult<UserDTO>> EditEmployee(int Id, [FromForm] UserDTO user)
+        public async Task<ActionResult<UserDTO>> EditUser(int Id, [FromForm] UserDTO user)
         {
 
             var userDB = await db.Users.FindAsync(Id);
@@ -124,8 +127,9 @@ namespace FaceRecognitionAPI.Controllers
             return Ok(dto);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("delete/{Id}")]
-        public async Task<IActionResult> DeleteEmployee(int Id)
+        public async Task<IActionResult> DeleteUser(int Id)
         {
             var user = await db.Users.FindAsync(Id);
             if (user == null)
@@ -139,7 +143,7 @@ namespace FaceRecognitionAPI.Controllers
 
 
         [HttpGet("Username")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetUsername()
         {
             var identity = User.Identity.Name;
@@ -157,7 +161,7 @@ namespace FaceRecognitionAPI.Controllers
         }
 
         [HttpGet("Roles")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetRoles()
         {
             var identity = User.Identity.Name;
@@ -175,7 +179,7 @@ namespace FaceRecognitionAPI.Controllers
         }
 
         [HttpGet("Id")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetId()
         {
             var identity = User.Identity.Name;
