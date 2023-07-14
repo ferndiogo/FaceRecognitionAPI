@@ -19,18 +19,26 @@ namespace FaceRecognitionAPI.Controllers {
     [Route("[controller]")]
     public class EmployeeController : ControllerBase {
 
+        //variavel utilizada para comunicação com a base de dados 
         private readonly ApplicationDbContext _context;
+
+        //variaveis para comunicação com os serviços da AWS
         private readonly IAmazonS3 _amazonS3Client;
         private readonly IConfiguration _configuration;
         private readonly AmazonDynamoDBClient _dynamoDbClient;
 
+        /// <summary>
+        /// Construtor da classe 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="config"></param>
         public EmployeeController(ApplicationDbContext context, IConfiguration config)
         {
             this._context = context;
 
             this._configuration = config;
 
-            // Manually set AWS credentials
+            // Configurar manualmente as credenciais da AWS
             var awsAccessKeyId = _configuration["AWS:AccessKeyId"];
             var awsSecretAccessKey = _configuration["AWS:SecretAccessKey"];
             var awsRegion = _configuration["AWS:Region"];
@@ -40,6 +48,10 @@ namespace FaceRecognitionAPI.Controllers {
             this._dynamoDbClient = new AmazonDynamoDBClient(credentials, RegionEndpoint.GetBySystemName(awsRegion));
         }
 
+        /// <summary>
+        /// Listar todos os funcionários
+        /// </summary>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [HttpGet]
         public async Task<ActionResult<List<EmployeeDTO>>> ListEmployees()
@@ -67,6 +79,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(list);
         }
 
+        /// <summary>
+        /// Obter os dados de um funcionário especifico
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [HttpGet("{Id}")]
         public async Task<ActionResult<EmployeeDTO>> GetEmployee(int Id)
@@ -93,6 +110,12 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Adicionar um novo funcionário ao sistema
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="emp"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost]
@@ -127,6 +150,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Eliminar um funcionário especifico do sistema
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteEmployee(int Id)
@@ -155,6 +183,13 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok("Employee successfully removed");
         }
 
+        /// <summary>
+        /// Editar os dados de um funcionário
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="Id"></param>
+        /// <param name="emp"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpPut("{Id}")]
         public async Task<ActionResult<EmployeeDTO>> EditEmployee(IFormFile image ,int Id, [FromForm] Employee emp)
@@ -203,6 +238,13 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Função para fazer upload de imagens para o Amazon S3
+        /// </summary>
+        /// <param name="imageFile"></param>
+        /// <param name="name"></param>
+        /// <param name="employeeId"></param>
+        /// <returns></returns>
         private async Task<Boolean> UploadImageAWSS3(IFormFile imageFile, string name, int employeeId)
         {
             if (imageFile == null || imageFile.Length == 0 || string.IsNullOrEmpty(name) || employeeId < 0)
@@ -232,6 +274,12 @@ namespace FaceRecognitionAPI.Controllers {
             return true;
         }
 
+        /// <summary>
+        /// Função para remover um registo da tabela da DynamoDB
+        /// </summary>
+        /// <param name="attribute"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         private async Task<Boolean> RemoveDynamoDBItem(string attribute, string value)
         {
             var table = Table.LoadTable(_dynamoDbClient, _configuration["AWS:DynamoDBTable"]);
@@ -253,6 +301,11 @@ namespace FaceRecognitionAPI.Controllers {
             return false;
         }
 
+        /// <summary>
+        /// Função para remover item do Amazon S3
+        /// </summary>
+        /// <param name="imageName"></param>
+        /// <returns></returns>
         private async Task RemoveAWSS3Item(string imageName)
         {
             var deleteRequest = new DeleteObjectRequest
@@ -264,6 +317,11 @@ namespace FaceRecognitionAPI.Controllers {
             await _amazonS3Client.DeleteObjectAsync(deleteRequest);
         }
 
+        /// <summary>
+        /// Função para remover os acentos de uma string
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
         private static string RemoveAccents(String str)
         {
             var bytes = Encoding.GetEncoding("Cyrillic").GetBytes(str);

@@ -7,11 +7,12 @@ using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Adicionar serviços ao contêiner.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+// Configurar CORS para permitir qualquer origem, método e cabeçalho.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
@@ -22,6 +23,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configurar autenticação JWT.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -40,6 +42,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    // Adicionar definição de segurança para autenticação JWT.
     options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
         Description = "Standard Authorization header using the Bearer scheme (\"bearer {token}\")",
@@ -48,25 +51,32 @@ builder.Services.AddSwaggerGen(options =>
         Type = SecuritySchemeType.ApiKey
     });
 
+    // Adicionar filtro de operação para exigir autenticação em cada operação.
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configurar o pipeline de solicitação HTTP.
 if (app.Environment.IsDevelopment())
 {
+    // Configurar Swagger para gerar documentação em ambiente de desenvolvimento.
+    app.UseSwagger();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Configurar CORS.
 app.UseCors();
 
+// Redirecionar para HTTPS.
 app.UseHttpsRedirection();
 
+// Autenticação e autorização.
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Mapear os controladores.
 app.MapControllers();
 
 app.Run();

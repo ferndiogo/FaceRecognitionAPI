@@ -17,16 +17,28 @@ namespace FaceRecognitionAPI.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        //variavel utilizada para comunicação com a base de dados
         private readonly ApplicationDbContext db;
-        //public static User user = new User();
+        //variavel utilizada para aceder as configurações presentes no ficheiro appsettings.json
         private readonly IConfiguration _configuration;
 
+        /// <summary>
+        /// Construtor da classe
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="db"></param>
         public AuthController(IConfiguration configuration, ApplicationDbContext db)
         {
             _configuration = configuration;
             this.db = db;
         }
-
+        
+        /// <summary>
+        /// Registar um novo utilizador
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost("register")]
@@ -54,6 +66,11 @@ namespace FaceRecognitionAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Alterar password do utilizador
+        /// </summary>
+        /// <param name="password"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [Consumes("multipart/form-data")]
         [HttpPost("changePass")]
@@ -63,8 +80,7 @@ namespace FaceRecognitionAPI.Controllers
             User user = await db.Users.Where(a => a.Username == username).FirstOrDefaultAsync();
 
             if (User != null)
-            {               
-
+            {
                 CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
 
                 user.PasswordHash = passwordHash;
@@ -81,7 +97,12 @@ namespace FaceRecognitionAPI.Controllers
         }
 
 
-
+        /// <summary>
+        /// Permite ao utilizador realizar login
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
         [Consumes("multipart/form-data")]
         [HttpPost("login")]
         public async Task<ActionResult<string>> Login([FromForm] String username, [FromForm] String password)
@@ -101,13 +122,17 @@ namespace FaceRecognitionAPI.Controllers
 
             user.TokenCreated = DateTime.Now;
             user.TokenExpires = DateTime.Now.AddDays(7);
-            db.SaveChanges();
+            await db.SaveChangesAsync();
 
             string token = CreateToken(user);
 
             return Ok(token);
         }
 
+        /// <summary>
+        /// Listar os utilizadores do sistema
+        /// </summary>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<List<UserDTO>>> ListUsers()
@@ -129,6 +154,12 @@ namespace FaceRecognitionAPI.Controllers
             return Ok(list);
         }
 
+        /// <summary>
+        /// Editar o username e o 
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpPut("edit/{Id}")]
         public async Task<ActionResult<UserDTO>> EditUser(int Id, [FromForm] UserDTO user)
@@ -139,22 +170,35 @@ namespace FaceRecognitionAPI.Controllers
             if (userDB == null)
             { return BadRequest("Unregistered User"); }
 
-            userDB.Username = user.Username;
-            userDB.Role = user.Role;
+            if (!(db.Users.Where(x => x.Username == user.Username).Any()))
+            {               
 
-            UserDTO dto = new UserDTO
+                userDB.Username = user.Username;
+                userDB.Role = user.Role;
+
+                UserDTO dto = new UserDTO
+                {
+                    Id = userDB.Id,
+                    Username = userDB.Username,
+                    TokenCreated = userDB.TokenCreated,
+                    Role = userDB.Role
+                };
+
+                await db.SaveChangesAsync();
+
+                return Ok(dto);
+            }
+            else
             {
-                Id = userDB.Id,
-                Username = userDB.Username,
-                TokenCreated = userDB.TokenCreated,
-                Role = userDB.Role
-            };
-
-            await db.SaveChangesAsync();
-
-            return Ok(dto);
+                return BadRequest("Username in use");
+            }
         }
 
+        /// <summary>
+        /// Eliminar utilizador
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpDelete("delete/{Id}")]
         public async Task<IActionResult> DeleteUser(int Id)
@@ -168,8 +212,10 @@ namespace FaceRecognitionAPI.Controllers
             return Ok("User successfully removed");
         }
 
-
-
+        /// <summary>
+        /// Obter o username a partir do token
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("Username")]
         [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetUsername()
@@ -188,6 +234,10 @@ namespace FaceRecognitionAPI.Controllers
 
         }
 
+        /// <summary>
+        /// Obter a role do utilizador a partir do token
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("Roles")]
         [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetRoles()
@@ -206,6 +256,10 @@ namespace FaceRecognitionAPI.Controllers
 
         }
 
+        /// <summary>
+        /// Obter o id do utilizador a partir do token
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("Id")]
         [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<string>> GetId()
@@ -224,7 +278,11 @@ namespace FaceRecognitionAPI.Controllers
 
         }
 
-
+        /// <summary>
+        /// Função para criar o token JWT para o utilizador
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
         private string CreateToken(User user)
         {
             List<Claim> claims = new List<Claim>
@@ -248,6 +306,12 @@ namespace FaceRecognitionAPI.Controllers
             return jwt;
         }
 
+        /// <summary>
+        /// Criar o hash e o salt da password
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="passwordHash"></param>
+        /// <param name="passwordSalt"></param>
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512())
@@ -257,6 +321,13 @@ namespace FaceRecognitionAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Verifica se a password do utilizador corresponde ao hash armazenado
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="passwordHash"></param>
+        /// <param name="passwordSalt"></param>
+        /// <returns></returns>
         private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512(passwordSalt))

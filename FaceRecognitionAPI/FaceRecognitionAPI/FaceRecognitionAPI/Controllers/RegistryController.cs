@@ -16,18 +16,25 @@ namespace FaceRecognitionAPI.Controllers {
     [Route("[controller]")]
     [ApiController]
     public class RegistryController : ControllerBase {
-
+        //variavel utilizada para comunicação com a base de dados 
         private readonly ApplicationDbContext _context;
+
+        //variaveis para comunicação com os serviços da AWS
         private readonly IConfiguration _configuration;
         private readonly AmazonRekognitionClient _rekognitionClient;
         private readonly AmazonDynamoDBClient _dynamoDbClient;
 
+        /// <summary>
+        /// construtor da classe
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="configuration"></param>
         public RegistryController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
 
-            // Manually set AWS credentials
+            // Configurar manualmente as credenciais da AWS
             var awsAccessKeyId = _configuration["AWS:AccessKeyId"];
             var awsSecretAccessKey = _configuration["AWS:SecretAccessKey"];
             var awsRegion = _configuration["AWS:Region"];
@@ -38,6 +45,10 @@ namespace FaceRecognitionAPI.Controllers {
 
         }
 
+        /// <summary>
+        /// Listar todos os registos
+        /// </summary>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [HttpGet]
         public async Task<ActionResult<List<RegistryDTO>>> ListRegistries()
@@ -72,6 +83,11 @@ namespace FaceRecognitionAPI.Controllers {
             return BadRequest("There are no Registries");
         }
 
+        /// <summary>
+        /// Listar os registos de um funcionário especifico
+        /// </summary>
+        /// <param name="employeeId"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [HttpGet("employee/{employeeId}")]
         public async Task<ActionResult<List<RegistryDTO>>> ListRegistriesEmployee(int employeeId)
@@ -110,6 +126,11 @@ namespace FaceRecognitionAPI.Controllers {
             return BadRequest("There are no Registries for this employee");
         }
 
+        /// <summary>
+        /// Obter dados de um registo específico
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin, User")]
         [HttpGet("{id}")]
         public async Task<ActionResult<RegistryDTO>> GetRegistry(int id)
@@ -143,6 +164,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(aux);
         }
 
+        /// <summary>
+        /// Adicionar um registo de forma manual, sem ser por reconhecimento facial
+        /// </summary>
+        /// <param name="registry"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [Consumes("multipart/form-data")]
         [HttpPost("manual")]
@@ -162,6 +188,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(registry);
         }
 
+        /// <summary>
+        /// Adicionar um registo através do reconhecimento facial
+        /// </summary>
+        /// <param name="img"></param>
+        /// <returns></returns>
         [HttpPost]
         public async Task<ActionResult<List<Registry>>> AddRegistry(IFormFile img)
         {
@@ -211,6 +242,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(list);
         }
 
+        /// <summary>
+        /// Eliminar um registo de ponto
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRegistry(int id)
@@ -226,6 +262,12 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok("Registry sucessfully removed");
         }
 
+        /// <summary>
+        /// Editar um registo
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="registry"></param>
+        /// <returns></returns>
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<ActionResult<RegistryDTO>> EditRegistry(int id, [FromForm]Registry registry)
@@ -273,6 +315,11 @@ namespace FaceRecognitionAPI.Controllers {
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Reconhecer uma face em uma imagem usando Amazon Rekognition
+        /// </summary>
+        /// <param name="imageFile"></param>
+        /// <returns></returns>
         private async Task<List<int>> RecognizeFace(IFormFile imageFile)
         {
             try
@@ -301,7 +348,7 @@ namespace FaceRecognitionAPI.Controllers {
 
                 if (rekognitionResponse.FaceMatches.Count > 0)
                 {
-                    // Process the face matches and return the results
+                    // Processar os resultados dos matches e retornar os IDs dos funcionários correspondentes
                     List<int> emps = new List<int>();
 
                     foreach (var match in rekognitionResponse.FaceMatches)
@@ -340,6 +387,12 @@ namespace FaceRecognitionAPI.Controllers {
             }
         }
 
+        /// <summary>
+        /// Procurar itens na tabela da DynamoDB
+        /// </summary>
+        /// <param name="attribute"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         private async Task<List<Dictionary<string, AttributeValue>>> SearchItems(string attribute, string value)
         {
             var request = new ScanRequest
