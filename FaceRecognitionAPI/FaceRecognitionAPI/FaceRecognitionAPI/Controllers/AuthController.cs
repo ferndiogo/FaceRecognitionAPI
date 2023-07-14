@@ -54,6 +54,34 @@ namespace FaceRecognitionAPI.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin, User")]
+        [Consumes("multipart/form-data")]
+        [HttpPost("changePass")]
+        public async Task<ActionResult<String>> ChangePassword([FromForm] String password)
+        {
+            var username = User.Identity.Name;
+            User user = await db.Users.Where(a => a.Username == username).FirstOrDefaultAsync();
+
+            if (User != null)
+            {               
+
+                CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
+
+                user.PasswordHash = passwordHash;
+                user.PasswordSalt = passwordSalt;
+
+                await db.SaveChangesAsync();
+
+                return Ok("Password atualizada com sucesso");
+            }
+            else
+            {
+                return BadRequest("Utilizador não encontrado.");
+            }
+        }
+
+
+
         [Consumes("multipart/form-data")]
         [HttpPost("login")]
         public async Task<ActionResult<string>> Login([FromForm] String username, [FromForm] String password)
